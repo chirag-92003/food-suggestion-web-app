@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    # entrypoint: ["/bin/sh", "-c"]
+    # command: >
+    #   ollama serve &
+    #   sleep 10 &&
+    #   OLLAMA_NO_TTY=1 ollama pull qwen3.5:cloud &&
+    #   wait
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/src:/app
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    depends_on:
+      - ollama
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./my-frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./my-frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  ollama_data:
